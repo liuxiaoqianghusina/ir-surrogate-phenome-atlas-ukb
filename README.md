@@ -90,6 +90,7 @@ Intermediate files expected under `/path/to/upstream` (instance 0 unless stated)
 | `19_mr_finngen_fetch.py` | FinnGen R12 lookups by HTTP range reads |
 | `20_mr_analysis.py` | Harmonisation, IVW, MR-Egger, weighted median, multivariable MR, conditional F |
 | `21_mr_figure.py` | MR figure |
+| `22_conventional_replication.R` | Conventional TyG quartile analysis (Q4 vs Q1) with negative- and positive-control outcomes; run before `16_main_figures.py` |
 
 ## Requirements
 

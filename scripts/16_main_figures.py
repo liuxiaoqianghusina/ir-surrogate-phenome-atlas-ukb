@@ -129,7 +129,7 @@ fig.tight_layout(); save(fig, "Fig2")
 # ================= 图 3：特异性汇总 =================
 s1 = S[S.model == "M1"].set_index("index").loc[COMPOSITE + COMPS]; s1 = s1.sort_values("sig_calibrated_FDR")
 SNc = pd.read_csv(f"{RES}/u04b_strict_nc.csv"); SNc = SNc[SNc.model == "M1"].set_index("index").reindex(s1.index)
-fig = plt.figure(figsize=(174 * MM, 140 * MM)); gs = gridspec.GridSpec(2, 2, height_ratios=[1.15, 1], width_ratios=[1.3, 1], hspace=0.7, wspace=0.55)
+fig = plt.figure(figsize=(174 * MM, 205 * MM)); gs = gridspec.GridSpec(3, 2, height_ratios=[1.15, 1, 1], width_ratios=[1.3, 1], hspace=0.75, wspace=0.55)
 y = np.arange(len(s1))
 ax = fig.add_subplot(gs[0, 0]); ax.hlines(y, s1.sig_calibrated_FDR, s1.sig_raw_FDR, color=LG, lw=1.6)
 ax.plot(s1.sig_raw_FDR, y, "o", color=GREY, ms=3, label="Before calibration")
@@ -155,6 +155,22 @@ ax.axhline(1, color=GREY, ls="--", lw=0.5); ax.set_yscale("log"); ax.set_xticks(
 ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}")); ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter()); ax.set_yticks([0.8, 0.9, 1, 1.25, 1.5, 2])
 ax.set_ylabel("TyG: HR per SD (95% CI)"); ax.legend(frameon=False, loc="upper right", fontsize=5.6)
 ax.set_title("Filled symbols: significant after negative-control calibration (FDR<0.05); open symbols: not specific", loc="left", fontsize=6); plab(ax, "c", x=-0.07)
+# d：复现以往文献的常规做法（TyG Q4 vs Q1），与阴性对照和阳性对照并列
+CV = pd.read_csv(f"{RES}/u15_conventional.csv")
+GO = [("HF", "Heart failure"), ("Stroke", "Ischaemic stroke"), ("Death", "All-cause death"), ("AF", "Atrial fibrillation"),
+      ("Acute tonsillitis (NC)", "Acute tonsillitis"), ("Dental caries (NC)", "Dental caries"), ("MI", "Myocardial infarction")]
+MD = [("A", "#7F7F7F", "Demographics and lifestyle"), ("B", "#E08214", "+ blood pressure, LDL-C, drugs"), ("C", RED, "+ BMI")]
+ax = fig.add_subplot(gs[2, :]); ax.axvspan(3.5, 5.5, color="#F2F2F2", lw=0, zorder=0); ax.axvspan(5.5, 6.5, color="#EAF1F8", lw=0, zorder=0)
+for j, (o, _) in enumerate(GO):
+    for k, (m, c, lb) in enumerate(MD):
+        r = CV[(CV.outcome == o) & (CV.model == m)].iloc[0]; xj = j + (k - 1) * 0.22; filled = r.p < 0.05
+        ax.vlines(xj, r.lo, r.hi, color=c, lw=0.8); ax.plot(xj, r.HR_Q4, "o", ms=3.4, mfc=c if filled else "white", mec=c, mew=0.8, label=lb if j == 0 else None)
+ax.axhline(1, color=GREY, ls="--", lw=0.5); ax.set_yscale("log"); ax.set_xticks(range(len(GO))); ax.set_xticklabels([g[1] for g in GO], rotation=25, ha="right")
+ax.set_yticks([0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]); ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}")); ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+ax.set_ylim(0.68, 2.25); ax.set_xlim(-0.6, len(GO) - 0.4); ax.set_ylabel("TyG Q4 vs Q1: HR (95% CI)")
+ax.text(4.5, 2.05, "Negative controls", ha="center", fontsize=5.8, color="#595959"); ax.text(6, 2.05, "Positive control", ha="center", fontsize=5.8, color="#2166AC")
+ax.legend(frameon=False, loc="upper left", fontsize=5.6)
+ax.set_title("Conventional quartile analysis: filled symbols $P$<0.05", loc="left", fontsize=6); plab(ax, "d", x=-0.07)
 save(fig, "Fig3")
 # ================= 图 4：目标结局热图 =================
 T = C[(C.model == "M1") & C.outcome.isin(TGT)].copy(); rows = COMPOSITE + COMPS
