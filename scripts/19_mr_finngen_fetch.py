@@ -1,7 +1,7 @@
 """mr02：按 GRCh38 位置从 FinnGen R12 公开汇总数据（GCS，bgzip + tabix）做 HTTP 范围读取，只取工具变量所在的行，不下载整个文件。
 解析本地 .tbi 的线性索引得到虚拟偏移，再用 Range 请求取相应 BGZF 块并解压（方法同肠道激素轴项目 m02）。多线程。用 python3 -P 运行。
-输出 results/mr02_finngen_lookup.csv。"""
-import gzip, struct, zlib, subprocess, sys, time
+输出 results/mr02_finngen_lookup.csv；已读取过的 SNP 不再重复读取。"""
+import gzip, struct, zlib, subprocess, sys, time, os
 from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 ROOT = "/path/to/project"
@@ -78,15 +78,21 @@ def fetch(url, ioff, chrom, pos, window=2):
 if __name__ == "__main__":
     I = pd.read_csv(f"{ROOT}/results/mr01_instruments.csv", dtype={"chr": str})
     Q = I.drop_duplicates("rsid")[["rsid", "chr", "pos38"]].reset_index(drop=True)
+    OUTF = f"{ROOT}/results/mr02_finngen_lookup.csv"
+    old = pd.read_csv(OUTF, dtype={"chrom": str, "rsids": str}) if os.path.exists(OUTF) else pd.DataFrame()   # 已读取过的 SNP 直接沿用
     eps = sys.argv[1:] or ENDPOINTS; t0 = time.time(); out = []
     for ep in eps:
+        done = set(old[old.endpoint == ep].query_rsid) if len(old) else set()
+        Qe = Q[~Q.rsid.isin(done)]
+        if Qe.empty: print(ep, "nothing new", flush=True); continue
         ioff = read_tbi(f"{FG}/finngen_R12_{ep}.gz.tbi"); key = next(iter(ioff))
         def one(q):
             ch = q.chr if not key.startswith("chr") else f"chr{q.chr}"
             ch = "23" if ch == "X" else ch
             return [[ep, q.rsid, q.pos38] + f[:len(HEAD)] for f in fetch(URL.format(ep), ioff[ch], ch, int(q.pos38))]
         with ThreadPoolExecutor(8) as ex:
-            for res in ex.map(one, [q for q in Q.itertuples(index=False)]): out.extend(res)
+            for res in ex.map(one, [q for q in Qe.itertuples(index=False)]): out.extend(res)
         print(ep, "done", len(out), "rows", round(time.time() - t0), "s", flush=True)
     O = pd.DataFrame(out, columns=["endpoint", "query_rsid", "query_pos38"] + HEAD)
-    O.to_csv(f"{ROOT}/results/mr02_finngen_lookup.csv", index=False); print(O.shape)
+    if len(old): O = pd.concat([old, O.astype(old.dtypes.to_dict(), errors="ignore")], ignore_index=True)
+    O.to_csv(OUTF, index=False); print(O.shape)

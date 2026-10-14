@@ -1,6 +1,6 @@
-"""mr03：两样本孟德尔随机化 —— 暴露：甘油三酯（GLGC 2013）、BMI 和腰臀比调整 BMI（GIANT 2015）；结局：FinnGen R12 的 10 个终点。
-单变量：IVW（乘法随机效应）、MR-Egger、加权中位数（自助法 SE），Cochran Q 和 I²。多变量 MR（IVW）：TG + BMI；TG + BMI + WHRadjBMI，并给出条件 F 统计量。
-所有估计为每 1 SD 遗传预测暴露的 OR。输出 results/mr03_harmonised.csv、mr03_univariable.csv、mr03_mvmr.csv。用 python3 -P 运行。"""
+"""mr03：两样本孟德尔随机化 —— 暴露：甘油三酯（GLGC 2013）、BMI 和腰臀比调整 BMI（GIANT 2015）、空腹血糖（MAGIC 2021，每 1 mmol/L）；结局：FinnGen R12 的 10 个终点。
+单变量：IVW（乘法随机效应）、MR-Egger、加权中位数（自助法 SE），Cochran Q 和 I²。多变量 MR（IVW）：TG + BMI；TG + BMI + WHRadjBMI；TG + FG + BMI；TG + FG + BMI + WHRadjBMI，并给出条件 F 统计量。
+甘油三酯、BMI 和 WHRadjBMI 为每 1 SD、空腹血糖为每 1 mmol/L 遗传预测暴露的 OR。输出 results/mr03_harmonised.csv、mr03_univariable.csv、mr03_mvmr.csv。用 python3 -P 运行。"""
 import numpy as np, pandas as pd
 from scipy import stats
 ROOT = "/path/to/project"
@@ -9,7 +9,7 @@ OUT = {"I9_CHD": "Coronary heart disease", "I9_HEARTFAIL": "Heart failure", "I9_
 COMP = {"A": "T", "T": "A", "C": "G", "G": "C"}
 I = pd.read_csv(f"{ROOT}/results/mr01_instruments.csv", dtype={"chr": str})
 F = pd.read_csv(f"{ROOT}/results/mr02_finngen_lookup.csv", dtype={"chrom": str, "rsids": str})
-FULL = {k: pd.read_pickle(f"{ROOT}/cache/mr_{k}.pkl").drop_duplicates("rsid").set_index("rsid") for k in ["TG", "BMI", "WHRadjBMI"]}
+FULL = {k: pd.read_pickle(f"{ROOT}/cache/mr_{k}.pkl").drop_duplicates("rsid").set_index("rsid") for k in ["TG", "BMI", "WHRadjBMI", "FG"]}
 
 
 def align(ea, oa, eaf, ref, alt, af_alt):
@@ -113,7 +113,7 @@ def mv_matrix(exps):
 
 
 MV = []
-for exps in [["TG", "BMI"], ["TG", "BMI", "WHRadjBMI"]]:
+for exps in [["TG", "BMI"], ["TG", "BMI", "WHRadjBMI"], ["TG", "FG", "BMI"], ["TG", "FG", "BMI", "WHRadjBMI"]]:
     M = mv_matrix(exps)
     # 条件 F（Sanderson 2021，假设暴露间 SNP 效应协方差为 0）
     condF = {}

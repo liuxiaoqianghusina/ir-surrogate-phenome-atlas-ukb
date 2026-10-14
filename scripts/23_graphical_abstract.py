@@ -54,17 +54,17 @@ W.text(x0 + 24, 111, "•  Heart failure, atrial fibrillation", fontsize=7.4, co
 W.text(x0 + 24, 95, "•  Stroke, all-cause death", fontsize=7.4, color=DARK, va="center")
 W.text(x0 + 24, 76, "HF: HR 1.05 → 0.94 after BMI adjustment", fontsize=6.9, color=RED, va="center")
 # ---- 4 孟德尔随机化
-ax = fig.add_axes([0.80, 0.30, 0.17, 0.48])
-MR = [("TG", "I9_CHD", "Triglycerides → CHD", RED), ("TG", "I9_HEARTFAIL", "Triglycerides → HF", RED), ("BMI", "I9_HEARTFAIL", "BMI → HF", BLUE)]
+ax = fig.add_axes([0.80, 0.28, 0.17, 0.55])
+MR = [("TG", "I9_CHD", "Triglycerides → CHD", RED), ("TG", "I9_HEARTFAIL", "Triglycerides → HF", RED), ("FG", "I9_HEARTFAIL", "Glucose → HF", "#E08214"), ("BMI", "I9_HEARTFAIL", "BMI → HF", BLUE)]
 for j, (e, o, lb, c) in enumerate(MR):
     r = U.loc[(e, o)]; yv = len(MR) - 1 - j
     ax.hlines(yv, r.lo, r.hi, color=c, lw=1.4); ax.plot(r.OR, yv, "o", ms=5, color=c, mec="white", mew=0.6)
-    ax.text(0.62, yv + 0.33, lb, fontsize=7.2, color=DARK, va="bottom"); ax.text(2.05, yv, f"{r.OR:.2f}", fontsize=7, color=c, va="center", ha="left", fontweight="bold")
+    ax.text(0.62, yv + 0.30, lb, fontsize=7.0, color=DARK, va="bottom", zorder=5, bbox=dict(boxstyle="square,pad=0.05", fc="white", ec="none")); ax.text(2.05, yv, f"{r.OR:.2f}", fontsize=7, color=c, va="center", ha="left", fontweight="bold")
 ax.axvline(1, color=GREY, ls="--", lw=0.7); ax.set_xscale("log"); ax.set_xlim(0.6, 2.4); ax.set_ylim(-0.6, len(MR) - 0.1)
 ax.set_xticks([0.7, 1, 1.5, 2]); ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}")); ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 ax.tick_params(labelsize=6.2, length=2); ax.set_yticks([])
 for sp in ["top", "right", "left"]: ax.spines[sp].set_visible(False)
-ax.set_xlabel("OR per SD (FinnGen)", fontsize=6.4, labelpad=1)
+ax.set_xlabel("OR per SD (glucose: per mmol/L)", fontsize=6.2, labelpad=1)
 fig.savefig(f"{FIG}/Graphical_abstract.png", dpi=100, facecolor="white")
 fig.savefig(f"{FIG}/Graphical_abstract_hires.png", dpi=300, facecolor="white")
 fig.savefig(f"{FIG}/Graphical_abstract.svg", facecolor="white")

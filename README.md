@@ -21,7 +21,7 @@ Main steps:
    - abdominal and cardiac MRI
    - TyG–ApoB discordance
 4. **External anchoring in NHANES 2005–2018.** Construct validity against HOMA-IR, and linked mortality with and without HOMA-IR adjustment.
-5. **Mendelian randomisation.** Triglycerides (GLGC 2013), BMI and WHR adjusted for BMI (GIANT 2015) against 10 FinnGen R12 endpoints; univariable IVW, MR-Egger and weighted median, and multivariable MR.
+5. **Mendelian randomisation.** Triglycerides (GLGC 2013), fasting glucose (MAGIC 2021), BMI and WHR adjusted for BMI (GIANT 2015) against 10 FinnGen R12 endpoints; univariable IVW, MR-Egger and weighted median, and multivariable MR with all four exposures.
 
 ## Data
 
@@ -35,6 +35,7 @@ Public resources used:
 | NHANES public-use linked mortality files (2019) | Mortality follow-up | https://www.cdc.gov/nchs/data-linkage/mortality-public.htm |
 | UK Biobank coding 19 (ICD-10) | Cancer-registry code titles | https://biobank.ndph.ox.ac.uk/showcase/coding.cgi?id=19 |
 | GLGC 2013 triglycerides (`jointGwasMc_TG.txt.gz`) | MR exposure | http://csg.sph.umich.edu/willer/public/lipids2013/ |
+| MAGIC 2021 fasting glucose, European (`MAGIC1000G_FG_EUR.tsv.gz`) | MR exposure | https://magicinvestigators.org/downloads/ |
 | GIANT 2015 BMI, European (`SNP_gwas_mc_merge_nogc.tbl.uniq.gz`) and WHR adjusted for BMI (`GIANT_2015_WHRadjBMI_COMBINED_EUR.txt`) | MR exposures | https://portals.broadinstitute.org/collaboration/giant/ |
 | FinnGen R12 summary statistics and tabix indexes | MR outcomes (I9_CHD, I9_HEARTFAIL, I9_AF, I9_STR, T2D, M13_GOUT, K11_CHOLELITH, NAFLD, N14_CHRONKIDNEYDIS, K11_ACUTPANC) | https://storage.googleapis.com/finngen-public-data-r12/summary_stats/ |
 
@@ -48,7 +49,7 @@ Paths are written as placeholders. Before running, replace them as follows:
 | `/path/to/project` | This project (with `cache/`, `results/`, `figures/`, `external/`) |
 | `/path/to/upstream` | Intermediate files listed below |
 
-Put the NHANES `.xpt` files and mortality `.dat` files in `external/nhanes/`, coding 19 in `external/coding19.tsv`, the GWAS files in `external/gwas/glgc2013_tg/`, `external/gwas/giant2015_bmi/` and `external/gwas/giant2015_whradjbmi/`, and the FinnGen `.tbi` indexes in `external/finngen/`. `19_mr_finngen_fetch.py` reads only the BGZF blocks around each instrument with HTTP range requests, so the full FinnGen files do not have to be downloaded. Run the scripts from `scripts/` in numerical order. Run `14_nhanes.py` and `18`–`20` with `python3 -P`.
+Put the NHANES `.xpt` files and mortality `.dat` files in `external/nhanes/`, coding 19 in `external/coding19.tsv`, the GWAS files in `external/gwas/glgc2013_tg/`, `external/gwas/magic2021_fg/`, `external/gwas/giant2015_bmi/` and `external/gwas/giant2015_whradjbmi/`, and the FinnGen `.tbi` indexes in `external/finngen/`. `19_mr_finngen_fetch.py` reads only the BGZF blocks around each instrument with HTTP range requests, so the full FinnGen files do not have to be downloaded. Run the scripts from `scripts/` in numerical order. Run `14_nhanes.py` and `18`–`20` with `python3 -P`.
 
 The UK Biobank extract is expected as comma-separated tables keyed by `eid`, with columns named by field (`p<field>_i<instance>_a<array>`), as exported from the Research Analysis Platform:
 
