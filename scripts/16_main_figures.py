@@ -114,7 +114,7 @@ for ax, ix, lab in zip(axs, ["TyG", "TyG_WC", "neg_eGDR"], "abc"):
     ax.axhline(0, color=GREY, lw=0.4); ax.set_ylim(min(-6, d.z_cal.min() - 1), d.z_cal.max() + 2)
     top = d[sig].nlargest(9, "z_cal"); nx = place_labels(ax, [(r.x, r.z_cal, short(r.outcome, r.title)) for _, r in top.iterrows()]); print(ix, "leader-line crossings:", nx)
     ax.set_ylabel("Calibrated z")
-    ax.set_title(f"{LAB[ix]}: {int(sig.sum())} of {len(d)} diseases significant after calibration ({int((d.fdr_raw < 0.05).sum())} before calibration)", loc="left", fontsize=6.5)
+    ax.set_title(f"{LAB[ix]}: {int(sig.sum())} of {len(d)} outcomes significant after calibration ({int((d.fdr_raw < 0.05).sum())} before calibration)", loc="left", fontsize=6.5)
     plab(ax, lab, x=-0.07)
 cc = base.assign(x=lambda d: d.outcome.map(pos)).groupby("chapter").x.mean().reindex(chap_order)
 axs[-1].set_xticks(cc.values); axs[-1].set_xticklabels(cc.index, fontsize=6); axs[-1].set_xlabel("ICD-10 chapter (C and D include cancer registry; Death = all-cause and CV death)")
