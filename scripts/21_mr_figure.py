@@ -30,4 +30,4 @@ axs[0].set_yticks([-j for j in range(len(ORD))]); axs[0].set_yticklabels([LBL[o]
 from matplotlib.lines import Line2D
 fig.legend([Line2D([], [], marker="o", color=c, mfc=c, ms=3, lw=0.7) for _, _, c in EX], [el for _, el, _ in EX], frameon=False, loc="lower center", ncol=3, bbox_to_anchor=(0.55, -0.04))
 fig.text(0.99, -0.03, "Filled: $P$<0.05; open: $P$≥0.05", ha="right", fontsize=5.6)
-save(fig, "Fig7"); print("Fig7 saved")
+save(fig, "Fig6"); print("Fig6 saved")
