@@ -15,7 +15,7 @@ fig, axs = plt.subplots(2, 5, figsize=(174 * MM, 80 * MM), sharex=True)
 for ax, o in zip(axs.flat, OUT):
     for ix, c in COL.items():
         d = R[(R.outcome == o) & (R["index"] == ix)]; ax.plot(d.x, d.HR, color=c, lw=0.9, label=LAB[ix]); ax.fill_between(d.x, d.lo, d.hi, color=c, alpha=0.12, lw=0)
-    ax.axhline(1, color="#7F7F7F", lw=0.4, ls="--"); ax.set_yscale("log"); ax.set_title(o)
+    ax.axhline(1, color="#7F7F7F", lw=0.4, ls="--"); ax.set_yscale("log"); ax.set_title({"MASLD": "Fatty liver"}.get(o, o))
     ax.yaxis.set_major_locator(matplotlib.ticker.FixedLocator([0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10])); ax.yaxis.set_minor_locator(matplotlib.ticker.NullLocator())
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
 for ax in axs[-1]: ax.set_xlabel("Index (SD)")
@@ -30,7 +30,7 @@ for ax, ix in zip(axs, ["TyG", "TyG_WC", "neg_eGDR"]):
         for k, (lv, c) in enumerate([("White", "#7F7F7F"), ("South Asian", "#E08214"), ("Black", "#2166AC")]):
             r = dd[dd.level == lv]
             if len(r): r = r.iloc[0]; ax.hlines(-y0 - k * 0.25, r.lo, r.hi, color=c, lw=0.7); ax.plot(r.HR, -y0 - k * 0.25, "s", color=c, ms=2, label=lv if o == OUT[0] else None)
-        pint = dd.p_int.iloc[0] if len(dd) else np.nan; yt.append(-y0 - 0.25); yl.append(o)
+        pint = dd.p_int.iloc[0] if len(dd) else np.nan; yt.append(-y0 - 0.25); yl.append({"MASLD": "Fatty liver"}.get(o, o))
         ax.text(1.0, -y0 - 0.25, f"{pint:.2g}", transform=matplotlib.transforms.blended_transform_factory(ax.transAxes, ax.transData), fontsize=5.4, ha="right", va="center"); y0 += 1
     ax.text(1.0, 0.55, "$P$ for interaction", transform=matplotlib.transforms.blended_transform_factory(ax.transAxes, ax.transData), fontsize=5.4, ha="right", va="center")
     ax.axvline(1, color="#7F7F7F", ls="--", lw=0.4); ax.set_xscale("log"); ax.set_title(LAB[ix], pad=10); ax.set_xlabel("HR per SD"); ax.set_xlim(0.5, 5.2); ax.set_xticks([0.5, 1, 2, 4])

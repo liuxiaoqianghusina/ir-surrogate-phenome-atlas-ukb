@@ -14,7 +14,7 @@ LAB = {"TyG": "TyG", "TyG_fs": "TyG (fasting-std.)", "TyG_BMI": "TyG-BMI", "TyG_
        "c_negHDL": "HDL-C (inv.)", "c_BMI": "BMI", "c_WC": "Waist", "c_HbA1c": "HbA1c", "ref_ApoB": "ApoB", "HOMA_rin": "HOMA-IR"}
 COMPOSITE = ["TyG", "TyG_BMI", "TyG_WC", "TyG_WHtR", "TyG_ABSI", "TG_HDL", "AIP", "METS_IR", "neg_eGDR", "neg_eGDR_noHTN", "CHG", "CTI"]
 COMPS = ["c_lnTG", "c_lnGlu", "c_negHDL", "c_BMI", "c_WC", "c_HbA1c", "ref_ApoB"]
-TGT = {"fo_E11": "Type 2 diabetes", "fo_K76": "MASLD/liver", "fo_M10": "Gout", "fo_K80": "Gallstones", "fo_K85": "Acute pancreatitis", "fo_G47": "Sleep disorders",
+TGT = {"fo_E11": "Type 2 diabetes", "fo_K76": "Fatty liver (K76)", "fo_M10": "Gout", "fo_K80": "Gallstones", "fo_K85": "Acute pancreatitis", "fo_G47": "Sleep disorders",
        "fo_I10": "Hypertension", "fo_I21": "Myocardial infarction", "fo_I25": "Chronic IHD", "fo_I70": "Atherosclerosis", "fo_I73": "PVD", "fo_I63": "Ischaemic stroke",
        "fo_I50": "Heart failure", "fo_I48": "Atrial fibrillation", "fo_I35": "Aortic valve", "fo_N18": "CKD", "fo_I26": "Pulm. embolism", "fo_I80": "DVT",
        "fo_F03": "Dementia", "ca_C18": "Colon cancer", "ca_C22": "Liver cancer", "ca_C25": "Pancreatic cancer", "ca_C64": "Kidney cancer", "cvdeath": "CV death", "death": "All-cause death"}
@@ -51,27 +51,63 @@ for y1, y2 in [(82, 79.5), (62, 57.5), (40, 35.5)]: ax.annotate("", xy=(50, y2),
 save(fig, "SuppFig1_design")
 # ================= 图 2：全表型（3 个指数） =================
 SHORT = {"fo_E11": "Type 2 diabetes", "fo_E14": "Unspecified diabetes", "fo_E10": "Insulin-treated diabetes", "fo_E13": "Other diabetes", "fo_H36": "Diabetic retinopathy",
-         "fo_G63": "Secondary polyneuropathy", "fo_E66": "Obesity", "fo_E78": "Dyslipidaemia", "fo_M10": "Gout", "fo_K76": "MASLD/liver", "fo_K80": "Gallstones",
+         "fo_G63": "Secondary polyneuropathy", "fo_E66": "Obesity", "fo_E78": "Dyslipidaemia", "fo_M10": "Gout", "fo_K76": "Fatty liver (K76)", "fo_K80": "Gallstones",
          "fo_K85": "Acute pancreatitis", "fo_G47": "Sleep disorders", "fo_I10": "Hypertension", "fo_I11": "Hypertensive heart dis.", "fo_I12": "Hypertensive renal dis.",
          "fo_I20": "Angina", "fo_I21": "Myocardial infarction", "fo_I25": "Chronic IHD", "fo_N18": "CKD", "fo_L97": "Leg ulcer", "fo_K42": "Umbilical hernia",
          "fo_I50": "Heart failure", "fo_K74": "Liver fibrosis/cirrhosis", "fo_K41": "Femoral hernia", "fo_M81": "Osteoporosis", "fo_I89": "Lymphoedema",
          "fo_E29": "Testicular dysfunction", "fo_N03": "Chronic nephritic syndrome", "fo_N17": "Acute kidney injury", "cvdeath": "CV death", "ca_C54": "Uterine cancer"}
 def short(o, t): return SHORT.get(o, (str(t)[:1].upper() + str(t)[1:24]).rstrip(" ,"))
-def place_labels(ax, pts, fs=4.8):
-    """贪心放置标签：依次尝试上下左右偏移，避免与已放置的标签重叠；偏移较大时画引线。"""
-    fig = ax.figure; fig.canvas.draw(); rr = fig.canvas.get_renderer(); placed = []
-    for x, y, s in pts:
-        ok = False
-        for dy in [0.5, 1.3, -1.1, 2.1, -1.9, 2.9, 3.7, -2.7]:
-            for dx in [0, 14, -14, 28, -28, 42, -42]:
-                t = ax.text(x + dx, y + dy, s, fontsize=fs, ha="center", va="center")
-                bb = t.get_window_extent(rr).expanded(1.06, 1.25)
-                if not any(bb.overlaps(p) for p in placed):
-                    placed.append(bb); ok = True
-                    if abs(dx) > 0 or abs(dy) > 0.9: ax.plot([x, x + dx * 0.85], [y, y + dy * 0.75], color=GREY, lw=0.3, zorder=0)
-                    break
-                t.remove()
-            if ok: break
+def place_labels(ax, pts, fs=5.0):
+    """标注带：所有标签排在数据上方同一行；用保序回归（PAVA）在不重叠的前提下让每个标签尽量靠近其圆点，
+    再通过两两交换标签顺序消除引线交叉。引线从标签底部连到圆点边缘，不穿过文字。"""
+    fig = ax.figure; fig.canvas.draw(); rr = fig.canvas.get_renderer(); inv = ax.transData.inverted()
+    y_top = max(y for _, y, _ in pts); y_lab = y_top + 3.2; x_lo, x_hi = ax.get_xlim(); pad = 5
+    def width(s):
+        t = ax.text(0, 0, s, fontsize=fs); bb = t.get_window_extent(rr); t.remove()
+        (x0, _), (x1, _) = inv.transform([(0, 0), (bb.width, 0)]); return x1 - x0
+    W = {s: width(s) for _, _, s in pts}
+    def layout(P):
+        w = [W[s] for _, _, s in P]; off = [0.0]
+        for i in range(1, len(P)): off.append(off[-1] + (w[i - 1] + w[i]) / 2 + pad)
+        blocks = []
+        for v in [x - o for (x, _, _), o in zip(P, off)]:          # 保序回归：q 非降，最小化 Σ(q − t)²
+            blocks.append([v, 1])
+            while len(blocks) > 1 and blocks[-2][0] / blocks[-2][1] > blocks[-1][0] / blocks[-1][1]:
+                a = blocks.pop(); blocks[-1][0] += a[0]; blocks[-1][1] += a[1]
+        cx = [qi + o for qi, o in zip(sum([[b[0] / b[1]] * b[1] for b in blocks], []), off)]
+        sh = max(0, (x_lo + w[0] / 2 + 2) - cx[0]) - max(0, cx[-1] - (x_hi - w[-1] / 2 - 2))
+        return [c + sh for c in cx]
+    def crossings(P, cx):
+        def inter(a, b, c, d):
+            o = lambda p, q, r: (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+            return o(a, b, c) * o(a, b, d) < 0 and o(c, d, a) * o(c, d, b) < 0
+        seg = [((c, y_lab), (x, y)) for (x, y, _), c in zip(P, cx)]
+        return sum(inter(*seg[i], *seg[j]) for i in range(len(seg)) for j in range(i + 1, len(seg)))
+    P = sorted(pts); cx = layout(P); best = crossings(P, cx); improved = True
+    while improved and best > 0:                                   # 交换顺序，直到没有交叉或无法再减少
+        improved = False
+        for i in range(len(P) - 1):
+            for j in range(i + 1, len(P)):                         # 任意两两交换
+                Q = P.copy(); Q[i], Q[j] = Q[j], Q[i]; cq = layout(Q); k = crossings(Q, cq)
+                if k < best: P, cx, best, improved = Q, cq, k, True
+    if best > 0:                                                   # 仍有交叉：在“每个标签最多偏离原位 3 个位置”的排列中搜索
+        base = sorted(pts); n = len(base); cand = []
+        def rec(prefix, used):
+            if len(prefix) == n: cand.append(prefix); return
+            i = len(prefix)
+            for j in range(max(0, i - 3), min(n, i + 4)):
+                if j not in used: rec(prefix + [j], used | {j})
+        rec([], frozenset())
+        for perm in cand:
+            Q = [base[j] for j in perm]; cq = layout(Q); k = crossings(Q, cq)
+            if k < best: P, cx, best = Q, cq, k
+            if best == 0: break
+    for (x, y, s), c in zip(P, cx):
+        ax.annotate(s, xy=(x, y), xytext=(c, y_lab), textcoords="data", fontsize=fs, ha="center", va="bottom", zorder=4,
+                    arrowprops=dict(arrowstyle="-", color="#404040", lw=0.5, shrinkA=0.8, shrinkB=1.9))
+    ax.set_ylim(top=y_lab + 2.4)
+    ax.set_yticks([v for v in ax.get_yticks() if v <= y_top + 0.5 and v >= ax.get_ylim()[0]])   # 刻度只覆盖数据区
+    return best
 chap_order = [c for c in sorted(C.chapter.dropna().unique()) if c != "Death"] + ["Death"]
 cmap = plt.get_cmap("tab20"); col = {c: cmap(i % 20) for i, c in enumerate(chap_order)}
 fig, axs = plt.subplots(3, 1, figsize=(174 * MM, 150 * MM), sharex=True)
@@ -82,8 +118,8 @@ for ax, ix, lab in zip(axs, ["TyG", "TyG_WC", "neg_eGDR"], "abc"):
     sig = d.fdr_cal < 0.05
     ax.scatter(d.x[~sig], d.z_cal[~sig], s=3, c=[col[c] for c in d.chapter[~sig]], alpha=0.5, lw=0)
     ax.scatter(d.x[sig], d.z_cal[sig], s=9, c=[col[c] for c in d.chapter[sig]], edgecolor="black", lw=0.3)
-    ax.axhline(0, color=GREY, lw=0.4); ax.set_ylim(min(-6, d.z_cal.min() - 1), d.z_cal.max() + 4.2)
-    top = d[sig].nlargest(9, "z_cal"); place_labels(ax, [(r.x, r.z_cal, short(r.outcome, r.title)) for _, r in top.iterrows()])
+    ax.axhline(0, color=GREY, lw=0.4); ax.set_ylim(min(-6, d.z_cal.min() - 1), d.z_cal.max() + 2)
+    top = d[sig].nlargest(9, "z_cal"); nx = place_labels(ax, [(r.x, r.z_cal, short(r.outcome, r.title)) for _, r in top.iterrows()]); print(ix, "leader-line crossings:", nx)
     ax.set_ylabel("Calibrated z")
     ax.set_title(f"{LAB[ix]}: {int(sig.sum())} of {len(d)} diseases significant after calibration ({int((d.fdr_raw < 0.05).sum())} before calibration)", loc="left", fontsize=6.5)
     plab(ax, lab, x=-0.07)
@@ -158,7 +194,7 @@ fig, axs = plt.subplots(1, 2, figsize=(174 * MM, 72 * MM), gridspec_kw={"width_r
 ax = axs[0]; im = ax.imshow(Wd.values, cmap="Purples", vmin=0, vmax=25, aspect="auto")
 for i in range(Wd.shape[0]):
     for j in range(Wd.shape[1]): ax.text(j, i, f"{Wd.values[i, j]:.1f}", ha="center", va="center", fontsize=4.6, color="white" if Wd.values[i, j] > 15 else "black")
-ax.set_xticks(range(len(oc))); ax.set_xticklabels(oc, rotation=40, ha="right"); ax.set_yticks(range(len(ix6))); ax.set_yticklabels([LAB[i] for i in ix6]); plab(ax, "a", x=-0.4)
+ax.set_xticks(range(len(oc))); ax.set_xticklabels([{"MASLD": "Fatty liver"}.get(o, o) for o in oc], rotation=40, ha="right"); ax.set_yticks(range(len(ix6))); ax.set_yticklabels([LAB[i] for i in ix6]); plab(ax, "a", x=-0.4)
 ax.set_title("ΔC-index ×1000 over clinical model (UK Biobank)", loc="left", fontsize=6.3)
 ax = axs[1]; mi = ["TyG", "TyG_WC", "METS_IR", "neg_eGDR", "neg_eGDR_noHTN", "CHG", "c_HbA1c", "HOMA_rin"]
 m = Mo[(Mo.outcome == "cvd")].copy(); y = np.arange(len(mi))
