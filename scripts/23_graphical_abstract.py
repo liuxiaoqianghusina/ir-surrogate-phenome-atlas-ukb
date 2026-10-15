@@ -1,5 +1,5 @@
 """ga01：图形摘要（Cardiovascular Diabetology：约 920×300 像素，图注 ≤30 词，须在图片内、位于图下方）。
-四栏：研究设计 → 校准前后显著疾病数 → TyG 特异与不特异的结局 → 孟德尔随机化。输出 920×300 和 3 倍分辨率 PNG。"""
+四栏：研究设计 → 校准前后显著疾病数 → TyG 特异与不特异的结局 → 孟德尔随机化。输出 920×300 PNG、3 倍分辨率 PNG、SVG 和 600 ppi TIFF。"""
 import pandas as pd, numpy as np, matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
@@ -68,5 +68,9 @@ ax.set_xlabel("OR per SD (glucose: per mmol/L)", fontsize=6.2, labelpad=1)
 fig.savefig(f"{FIG}/Graphical_abstract.png", dpi=100, facecolor="white")
 fig.savefig(f"{FIG}/Graphical_abstract_hires.png", dpi=300, facecolor="white")
 fig.savefig(f"{FIG}/Graphical_abstract.svg", facecolor="white")
+import io
+buf = io.BytesIO(); fig.savefig(buf, format="png", dpi=600, facecolor="white"); buf.seek(0)   # 600 ppi TIFF（LZW 压缩，RGB），与正文图一致
+from PIL import Image as _Im
+_Im.open(buf).convert("RGB").save(f"{FIG}/Graphical_abstract.tiff", format="TIFF", compression="tiff_lzw", dpi=(600, 600))
 from PIL import Image
 im = Image.open(f"{FIG}/Graphical_abstract.png"); print("size", im.size, "caption words", len(CAP.split()))
